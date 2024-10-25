@@ -103,20 +103,32 @@ def blur_integral(img,dimension):
     i_wt = int(wT/2)
     
     for row in range (0,rows):
-        for col in range (0,cols):
-            for c in range (0,channel):
-                if row < i_ht or col < i_wt or row > (rows - i_ht-1) or col > (cols -i_wt-1):
-                    img_out[row][col][c] = 0
-                    continue
+        high_win_row = 0
+        low_win_row = 0
+        #Valor de correção de posição de pixel para as margens
+        #Os pixels selecionados acima da janela deslizante estão fora da janela, por isso é necessário somar +1
+        if row < i_ht+1:
+            high_win_row = i_ht - row +1
+        #Os pixel mas ao baixo da janela deslizante estão na altura da janela deslizante, por isso o -1
+        elif row > rows - i_ht-1:
+            low_win_row = (row + i_ht) - (rows -1)   
 
-                img_out [row,col,c] = img_buffer[row+i_ht][col+i_wt][c]  + img_buffer[row-i_ht-1][col-i_wt-1][c] - img_buffer[row+i_ht][col-i_wt-1][c] -img_buffer[row-i_ht-1][col+i_wt][c]
+        for col in range (0,cols):
+            #Valor de correção de posição de pixel para as margens
+            left_win_col = 0
+            right_win_col = 0
+
+            if col < i_wt+1:
+                left_win_col = i_wt - col +1
+            elif col > cols - i_wt-1:
+                right_win_col = (col + i_wt) -(cols -1) 
+
+            for c in range (0,channel):
+                #row-i_ht-1 : Possui o menos 1 para subtrair o pixel certo da matriz
+    
+                img_out [row,col,c] = img_buffer[row+i_ht-low_win_row][col+i_wt-right_win_col][c]  + img_buffer[row-i_ht-1+high_win_row][col-i_wt-1+left_win_col][c] - img_buffer[row+i_ht-low_win_row][col-i_wt-1+left_win_col][c] -img_buffer[row-i_ht-1+high_win_row][col+i_wt-right_win_col][c]
                 img_out [row,col,c] /= (hT*wT)
-            
-            
                
-            ##range é excludente, adicionar +1     
-        
-            
                 
     return img_out
    
@@ -147,8 +159,8 @@ def main ():
     start_time = timeit.default_timer ()
     dimension = np.shape(img)
     #Blur na imagem . 
-    img_blur = blur(img,dimension)
-    #img_blur = blur_integral(img,dimension)
+    #img_blur = blur(img,dimension)
+    img_blur = blur_integral(img,dimension)
 
     img_cv = cv2.blur(img, ksize=(TAMANHO_JANELAW, TAMANHO_JANELAH))
 
@@ -169,8 +181,8 @@ def main ():
     cv2.imwrite ('03 - Img Subtraida.png', img_blur_m_cv*255)
     cv2.imshow ('04 - normalizada', img_norm)
     cv2.imwrite ('04 - normalizada.png',img_norm)
-    cv2.imshow ('08 - cv', img_cv)
-    cv2.imwrite ('08 - cv.png', img_cv)
+    cv2.imshow ('05 - cv', img_cv)
+    cv2.imwrite ('05 - cv.png', img_cv)
     cv2.waitKey ()
     cv2.destroyAllWindows ()
 
