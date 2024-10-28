@@ -19,8 +19,8 @@ INPUT_IMAGE =  'bOriginal.bmp'
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
 THRESHOLD = 0.7
-TAMANHO_JANELAH = 3
-TAMANHO_JANELAW = 13
+TAMANHO_JANELAH =15
+TAMANHO_JANELAW = 11
 
 #===============================================================================
 
@@ -66,6 +66,53 @@ def blur(img,dimension):
                 img_out[row][col][i] = media[i]
             
                 
+    return img_out
+
+def blur_separavel(img,dimension):
+    rows, cols, channel = dimension
+
+    img_out = img.copy()
+    img_buffer = img.copy()
+    hT = TAMANHO_JANELAH
+    wT = TAMANHO_JANELAW
+    meio_ht = int(hT/2)
+    meio_wt = int(wT/2)
+
+    #Borrar imagem na horizontal
+    for row in range(0, rows):
+        primeira_coluna = True
+        soma = 0 
+        for col in range(0, cols):
+            #margem preta para colunas não utilizadas
+            if col < meio_wt or col > (cols - meio_wt - 1):
+                img_buffer[row, col] = 0
+                continue
+            #Janela deslizante 1xW
+            if primeira_coluna:
+                for x in range(col - meio_wt, col + meio_wt +1):#Fazer a soma completa na primeira janela 
+                    soma += img[row, x]
+                primeira_coluna = False
+            else:
+                soma = soma - img[row, col - meio_wt - 1] + img[row, col + meio_wt]
+            img_buffer[row, col] = soma/wT
+            
+    #Borrar imagem na vertical
+    for col in range(0, cols):
+        primeira_linha = True
+        soma = 0
+        for row in range(0, rows):
+            #margem preta para linhas e colunas não utilizadas
+            if row < meio_ht or col < meio_wt or row > (rows - meio_ht - 1) or col > (cols - meio_wt - 1):
+                img_out[row, col] = 0
+                continue
+            #Janela deslizante Hx1
+            if primeira_linha:
+                for y in range(row - meio_ht, row + meio_ht + 1):
+                    soma += img_buffer[y, col]    
+                primeira_linha = False
+            else:
+                soma = soma - img_buffer[row - meio_ht - 1, col] + img_buffer[row + meio_ht, col]
+            img_out[row, col] = soma/hT
     return img_out
 
 def integral(img,rows,cols,channel):
@@ -160,8 +207,8 @@ def main ():
     dimension = np.shape(img)
     #Blur na imagem . 
     #img_blur = blur(img,dimension)
-    img_blur = blur_integral(img,dimension)
-
+    #img_blur = blur_integral(img,dimension)
+    img_blur = blur_separavel(img,dimension)
     img_cv = cv2.blur(img, ksize=(TAMANHO_JANELAW, TAMANHO_JANELAH))
 
     print ('Tempo: %f' % (timeit.default_timer () - start_time))
