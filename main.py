@@ -158,8 +158,9 @@ def blur_integral(img,dimension):
         row_baixo_dir = row +i_ht
 
         #verifica se o pixel mais a baixo da janela não esta na imagem
-        #caso não esteja, arruma a posição do pixel mais a baixo
-        if row > rows -i_ht -1: 
+        #caso não esteja, arruma a posição do pixel mais a baixo para o limite da imagem (rows -1)
+        if row > rows -i_ht -1:
+            #Pega o valor de quantos pixels foi perdido na janela
             tamh = row_baixo_dir -rows+1
             row_baixo_dir = rows -1
             
@@ -168,6 +169,7 @@ def blur_integral(img,dimension):
             tamw = 0
             #o pixel mais a direita da janela
             col_baixo_dir = col +i_wt
+            
             #verifica se o pixel mais a direita da janela não esta na imagem
             #caso não esteja, arruma a posição do pixel mais a baixo para o limite da imagem (cols -1)
             if col > cols - i_wt -1: 
@@ -196,6 +198,7 @@ def blur_integral(img,dimension):
                 #verifica se a esqueda  -1 do kernel esta na imagem
                 #caso estiver,o inclui na somatória
                 if col > i_wt :
+                    #adiciona na somatória o pixel esquerda baixo
                     img_out[row,col,c] -= img_buffer[row_baixo_dir][col-i_wt-1][c]
                     flag2 = True
                 else: 
