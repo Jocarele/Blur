@@ -19,13 +19,10 @@ INPUT_IMAGE =  'bOriginal.bmp'
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
 THRESHOLD = 0.7
-<<<<<<< HEAD
-TAMANHO_JANELAH =15
-TAMANHO_JANELAW = 11
-=======
-TAMANHO_JANELAH = 13
-TAMANHO_JANELAW = 13
->>>>>>> a57d2f2 (Salvando mudanças locais antes do pull)
+
+TAMANHO_JANELAH = 50
+TAMANHO_JANELAW = 50
+
 
 #===============================================================================
 
@@ -155,55 +152,61 @@ def blur_integral(img,dimension):
     i_ht = int(hT/2)
     i_wt = int(wT/2)
     
-    for row in range (0,rows):
-        high_win_row = 0
-        low_win_row = 0   
-        
+    for row in range (0,rows):   
+        tamh = 0
+         #o pixel mais a baixo da janela
+        row_baixo_dir = row +i_ht
+
+        #verifica se o pixel mais a baixo da janela não esta na imagem
+        #caso não esteja, arruma a posição do pixel mais a baixo
+        if row > rows -i_ht -1: 
+            tamh = row_baixo_dir -rows+1
+            row_baixo_dir = rows -1
+            
 
         for col in range (0,cols):
+            tamw = 0
+            #o pixel mais a direita da janela
+            col_baixo_dir = col +i_wt
+            #verifica se o pixel mais a direita da janela não esta na imagem
+            #caso não esteja, arruma a posição do pixel mais a baixo para o limite da imagem (cols -1)
+            if col > cols - i_wt -1: 
+                #Pega o valor de quantos pixels foi perdido na janela
+                tamw = col_baixo_dir - cols+1
+                col_baixo_dir = cols -1
            
-
             for c in range (0,channel):
                 flag1 = False
                 flag2 = False
-                
-                
-                #o pixel mais a baixo da janela
-                row_baixo_dir = row +i_ht
-
-                #verifica se o pixel mais a baixo da janela não esta na imagem
-                #caso não esteja, arruma a posição do pixel mais a baixo
-                if row > rows - i_ht -1: 
-                    row_baixo_dir = row_baixo_dir -rows-1 +row 
-                    
-                #o pixel mais a direita da janela
-                col_baixo_dir = col +i_wt
-                #verifica se o pixel mais a direita da janela não esta na imagem
-                #caso não esteja, arruma a posição do pixel mais a baixo
-                if col > cols - i_wt -1: 
-                    col_baixo_dir = col_baixo_dir - cols-1 +col
+                menos_h = tamh
+                menos_w = tamw   
                     
                 #coloca o pixel diagonal direita baixo na somatória da imagem
                 img_out[row,col,c] = img_buffer[row_baixo_dir][col_baixo_dir][c]
 
-                #verifica se o topo do kernel esta na imagem
+                #verifica se o topo -1 do kernel esta na imagem
                 #caso estiver,o inclui na somatória
-                if row > i_ht+1:
+                if row > i_ht :
                     #adiciona na somatória o pixel direita cima 
                     img_out[row,col,c] -= img_buffer[row-i_ht-1][col_baixo_dir][c]
                     flag1= True
-                #verifica se a esqueda do kernel esta na imagem
+                else :
+                    #ajusta o tamanho da divisão da média
+                    menos_h += i_ht - row
+                #verifica se a esqueda  -1 do kernel esta na imagem
                 #caso estiver,o inclui na somatória
-                if col > i_ht + 1:
+                if col > i_wt :
                     img_out[row,col,c] -= img_buffer[row_baixo_dir][col-i_wt-1][c]
                     flag2 = True
+                else: 
+                    menos_w += i_wt -col
                 
                 #Adiciona um pixel no somatório para arrumar a área 
                 if(flag1 and flag2):
                     img_out[row,col,c] += img_buffer[row-i_ht-1][col-i_wt-1][c]
-
-    
-                img_out [row,col,c] /= (hT*wT)
+                
+                
+                img_out [row,col,c] /= ((hT-menos_h)*(wT-menos_w))
                
                 
     return img_out
@@ -236,8 +239,8 @@ def main ():
     dimension = np.shape(img)
     #Blur na imagem . 
     #img_blur = blur(img,dimension)
-    #img_blur = blur_integral(img,dimension)
-    img_blur = blur_separavel(img,dimension)
+    img_blur = blur_integral(img,dimension)
+    #img_blur = blur_separavel(img,dimension)
     img_cv = cv2.blur(img, ksize=(TAMANHO_JANELAW, TAMANHO_JANELAH))
 
     print ('Tempo: %f' % (timeit.default_timer () - start_time))
@@ -248,7 +251,7 @@ def main ():
 
     #Normaliza a imagem, assim verificando se realmente zerou
     img_norm = img_blur.copy()  
-    cv2.normalize(img_blur,dst=img_norm,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)
+    cv2.normalize(img_blur_m_cv,dst=img_norm,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)
     
     # Mostra os objetos encontrados.
     cv2.imshow ('02 - out', img_blur)
