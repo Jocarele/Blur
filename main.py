@@ -19,8 +19,13 @@ INPUT_IMAGE =  'bOriginal.bmp'
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
 THRESHOLD = 0.7
+<<<<<<< HEAD
 TAMANHO_JANELAH =15
 TAMANHO_JANELAW = 11
+=======
+TAMANHO_JANELAH = 13
+TAMANHO_JANELAW = 13
+>>>>>>> a57d2f2 (Salvando mudanças locais antes do pull)
 
 #===============================================================================
 
@@ -146,34 +151,58 @@ def blur_integral(img,dimension):
    
     hT = TAMANHO_JANELAH
     wT = TAMANHO_JANELAW
+    
     i_ht = int(hT/2)
     i_wt = int(wT/2)
     
     for row in range (0,rows):
         high_win_row = 0
-        low_win_row = 0
-        #Valor de correção de posição de pixel para as margens
-        #Os pixels selecionados acima da janela deslizante estão fora da janela, por isso é necessário somar +1
-        if row < i_ht+1:
-            high_win_row = i_ht - row +1
-        #Os pixel mas ao baixo da janela deslizante estão na altura da janela deslizante, por isso o -1
-        elif row > rows - i_ht-1:
-            low_win_row = (row + i_ht) - (rows -1)   
+        low_win_row = 0   
+        
 
         for col in range (0,cols):
-            #Valor de correção de posição de pixel para as margens
-            left_win_col = 0
-            right_win_col = 0
-
-            if col < i_wt+1:
-                left_win_col = i_wt - col +1
-            elif col > cols - i_wt-1:
-                right_win_col = (col + i_wt) -(cols -1) 
+           
 
             for c in range (0,channel):
-                #row-i_ht-1 : Possui o menos 1 para subtrair o pixel certo da matriz
+                flag1 = False
+                flag2 = False
+                
+                
+                #o pixel mais a baixo da janela
+                row_baixo_dir = row +i_ht
+
+                #verifica se o pixel mais a baixo da janela não esta na imagem
+                #caso não esteja, arruma a posição do pixel mais a baixo
+                if row > rows - i_ht -1: 
+                    row_baixo_dir = row_baixo_dir -rows-1 +row 
+                    
+                #o pixel mais a direita da janela
+                col_baixo_dir = col +i_wt
+                #verifica se o pixel mais a direita da janela não esta na imagem
+                #caso não esteja, arruma a posição do pixel mais a baixo
+                if col > cols - i_wt -1: 
+                    col_baixo_dir = col_baixo_dir - cols-1 +col
+                    
+                #coloca o pixel diagonal direita baixo na somatória da imagem
+                img_out[row,col,c] = img_buffer[row_baixo_dir][col_baixo_dir][c]
+
+                #verifica se o topo do kernel esta na imagem
+                #caso estiver,o inclui na somatória
+                if row > i_ht+1:
+                    #adiciona na somatória o pixel direita cima 
+                    img_out[row,col,c] -= img_buffer[row-i_ht-1][col_baixo_dir][c]
+                    flag1= True
+                #verifica se a esqueda do kernel esta na imagem
+                #caso estiver,o inclui na somatória
+                if col > i_ht + 1:
+                    img_out[row,col,c] -= img_buffer[row_baixo_dir][col-i_wt-1][c]
+                    flag2 = True
+                
+                #Adiciona um pixel no somatório para arrumar a área 
+                if(flag1 and flag2):
+                    img_out[row,col,c] += img_buffer[row-i_ht-1][col-i_wt-1][c]
+
     
-                img_out [row,col,c] = img_buffer[row+i_ht-low_win_row][col+i_wt-right_win_col][c]  + img_buffer[row-i_ht-1+high_win_row][col-i_wt-1+left_win_col][c] - img_buffer[row+i_ht-low_win_row][col-i_wt-1+left_win_col][c] -img_buffer[row-i_ht-1+high_win_row][col+i_wt-right_win_col][c]
                 img_out [row,col,c] /= (hT*wT)
                
                 
