@@ -12,7 +12,7 @@ import cv2
 
 #===============================================================================
 
-INPUT_IMAGE =  '82.bmp'
+INPUT_IMAGE =  '60.bmp'
 #INPUT_IMAGE = 'documento-3mp.bmp'
 
 # TODO: ajuste estes parâmetros!
@@ -79,17 +79,16 @@ respectivamente: topo, esquerda, baixo e direita.'''
                     
                     y,x = pilha.pop()
                    
-                    #                 2       1       2       1
                     direcao = [(-1,0),(1,0),(0,-1),(0,1)]
                     for dx,dy in direcao:
-                        if ((row + dy >= 0) and (col + dx >= 0) and (row + dy < rows)  and (col + dx < cols) ): 
+                        if ((y + dy >= 0) and (x + dx >= 0) and (y + dy < rows)  and (x + dx < cols) ): 
                             if img[y+dy,x+dx] == 1:
                                 img[y+dy,x+dx] = label
                                 n_pixel += 1
-                                retangulo['T'] = min(retangulo['T'],row+dy)
-                                retangulo['L'] = min(retangulo['L'],col+dx)
-                                retangulo['R'] = max(retangulo['R'],col+dx)
-                                retangulo['B'] = max(retangulo['B'],row+dy)
+                                retangulo['T'] = min(retangulo['T'],y+dy)
+                                retangulo['L'] = min(retangulo['L'],x+dx)
+                                retangulo['R'] = max(retangulo['R'],x+dx)
+                                retangulo['B'] = max(retangulo['B'],y+dy)
                                 pilha.append((y+dy,x+dx))
                 
                 if(n_pixel > n_pixels_min and (retangulo['R'] -retangulo ['L']) > largura_min and (retangulo['B']-retangulo['T']) > altura_min):
@@ -126,20 +125,20 @@ def main ():
         img = 1 - img
 
     rows,cols = np.shape(img)
-    #resized = cv2.resize(img, (cols*30, rows*30), 0, 0, interpolation = cv2.INTER_NEAREST)
-    #resized = cv2.resize(resized, (cols, rows), 0, 0, interpolation = cv2.INTER_LINEAR)
-    #dx = cv2.Sobel(resized,cv2.CV_32F,1,0)
-    #dy = cv2.Sobel(resized,cv2.CV_32F,0,1)
-    #mag = cv2.magnitude(dx,dy)
+    resized = cv2.resize(img, (cols*30, rows*30), 0, 0, interpolation = cv2.INTER_NEAREST)
+    resized = cv2.resize(resized, (cols, rows), 0, 0, interpolation = cv2.INTER_LINEAR)
+    dx = cv2.Sobel(resized,cv2.CV_32F,1,0)
+    dy = cv2.Sobel(resized,cv2.CV_32F,0,1)
+    mag = cv2.magnitude(dx,dy)
     #minimo = np.min(mag)
     #maximo = np.max(mag)
     #print(minimo,maximo)
-    #mag =cv2.normalize(mag,None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
-    #mag = binariza(mag,THRESHOLD2)
-    #mag = cv2.dilate(mag,(3,3),iterations=1)
+    mag =cv2.normalize(mag,None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
+    mag = binariza(mag,THRESHOLD2)
+    mag = cv2.dilate(mag,(3,3),iterations=1)
 
     
-    #img2 = img - mag
+    img2 = img - mag
     
     img2 = binariza (img, THRESHOLD)
     
