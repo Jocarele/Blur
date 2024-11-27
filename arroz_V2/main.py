@@ -12,16 +12,16 @@ import cv2
 
 #===============================================================================
 
-INPUT_IMAGE =  '60.bmp'
+INPUT_IMAGE =  '205.bmp'
 #INPUT_IMAGE = 'documento-3mp.bmp'
 
 # TODO: ajuste estes parâmetros!
 NEGATIVO = False
 THRESHOLD = 0.7
 THRESHOLD2 = 0.3
-ALTURA_MIN = 10
-LARGURA_MIN = 10
-N_PIXELS_MIN = 100
+ALTURA_MIN = 1
+LARGURA_MIN = 1
+N_PIXELS_MIN = 1
 
 #===============================================================================
 
@@ -95,6 +95,7 @@ respectivamente: topo, esquerda, baixo e direita.'''
                     componente = {'label' : label, "n_pixel" :n_pixel}
                     componente.update(retangulo)
                     componentes.append(componente)
+                    #print(n_pixel)
                    
                 label +=1
 
@@ -103,6 +104,35 @@ respectivamente: topo, esquerda, baixo e direita.'''
     return componentes
 #----------------------------------------------------------------------------------------
 
+def normaliza_local(img):
+    #TODO: determinar o tamanho do kernel ser proximo do tamanho de um arroz
+    kernel = np.ones((101,101), dtype=np.uint8)
+    #substitui o pixel pelo menor pixel encontrado no kernel
+    mini = cv2.erode(img,kernel)
+    sigma = 10
+    mini= cv2.GaussianBlur(mini, (0,0), sigma)
+    #Substitui o pixel pelo maior pixel encontrado no kerel
+    maxi = cv2.dilate(img,kernel)
+    maxi= cv2.GaussianBlur(maxi, (0,0), sigma)
+
+    img2 = np.copy(img)
+
+    img2 = (img -mini)/(maxi-mini)
+    return img2
+
+#----------------------------
+
+#-------------------------------------------------------------------------------------------
+
+def magnitude(img):
+    dx = cv2.Sobel(img,cv2.CV_32F,1,0)
+    dy = cv2.Sobel(img,cv2.CV_32F,0,1)
+    mag = cv2.magnitude(dx,dy)
+    #minimo = np.min(mag)
+    #maximo = np.max(mag)
+    #print(minimo,maximo)
+    mag =cv2.normalize(mag,None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
+    return mag
 #========================================================================================
 def main ():
 
@@ -112,9 +142,6 @@ def main ():
         print ('Erro abrindo a imagem.\n')
         sys.exit ()
 
-    # É uma boa prática manter o shape com 3 valores, independente da imagem ser
-    # colorida ou não. Também já convertemos para float32.
-    #img = img.reshape ((img.shape [0], img.shape [1], 1))
     img = img.astype (np.float32) / 255
     
     # Mantém uma cópia colorida para desenhar a saída.
@@ -125,44 +152,99 @@ def main ():
         img = 1 - img
 
     rows,cols = np.shape(img)
-    resized = cv2.resize(img, (cols*30, rows*30), 0, 0, interpolation = cv2.INTER_NEAREST)
-    resized = cv2.resize(resized, (cols, rows), 0, 0, interpolation = cv2.INTER_LINEAR)
-    dx = cv2.Sobel(resized,cv2.CV_32F,1,0)
-    dy = cv2.Sobel(resized,cv2.CV_32F,0,1)
-    mag = cv2.magnitude(dx,dy)
-    #minimo = np.min(mag)
-    #maximo = np.max(mag)
-    #print(minimo,maximo)
-    mag =cv2.normalize(mag,None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
-    mag = binariza(mag,THRESHOLD2)
-    mag = cv2.dilate(mag,(3,3),iterations=1)
+    
+    img= cv2.normalize(img,None,alpha=0,beta=1,norm_type=cv2.NORM_MINMAX)
+    
+
+    #expalhar o brilho da imagem
+    img2 = normaliza_local(img)
+
+    #img3 = binariza (img2, THRESHOLD)
+    kernel = 201
+    img = (img * 255).astype(np.uint8)  # Normalize para 8 bits
+    img3 = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, kernel, -30)
+    img3 = img3.astype (np.float32) / 255
+
+    #Limpa ruido
+    kernel = np.ones((5,5), dtype=np.uint8)
+    
+    #img3 = cv2.medianBlur(img3,9)
+
+    img3 = cv2.erode(img3,kernel)
+    img3 = cv2.dilate(img3,(kernel))
+    
+    cv2.imshow ('ORIGINAL', img/255)
+    cv2.imwrite ('ORIGINAL.png', img)
+    cv2.imshow ('01 - normalizado local', img2)
+    cv2.imwrite ('01 - normalizado local.png', img2*255)
+    cv2.imshow ('03 - binzarizada', img3)
+    cv2.imwrite ('03 - binzarizada.png', img3*255)
 
     
-    img2 = img - mag
-    
-    img2 = binariza (img, THRESHOLD)
-    
-    #cv2.imshow ('01 - binarizada', mag)
-    #cv2.imwrite ('01 - binarizada.png', mag*255)
-    cv2.imshow ('ORIGINAL', img)
-    cv2.imwrite ('ORIGINAL.png', img*255)
-    cv2.imshow ('02 - binarizada2', img2)
-    cv2.imwrite ('02 - binarizada2.png', img2*255)
 
     start_time = timeit.default_timer ()
-    componentes = rotula (img2, LARGURA_MIN, ALTURA_MIN, N_PIXELS_MIN)
+    componentes = rotula (img3, LARGURA_MIN, ALTURA_MIN, N_PIXELS_MIN)
     n_componentes = len (componentes)
     print ('Tempo: %f' % (timeit.default_timer () - start_time))
     print ('%d componentes detectados.' % n_componentes)
 
     # Mostra os objetos encontrados.
-    for c in componentes:
-        cv2.rectangle (img_out, (c ['L'], c ['T']), (c ['R'], c ['B']), (0,0,1))
+    tam = len(componentes)
+    pixel =np.zeros(tam)
+    for c in range(0,tam):
+        pixel[c] = componentes[c]["n_pixel"]
+    desvio = 100000
+    desvio = np.std(pixel)
 
+    
+    pixel = np.sort(pixel)
+    mediana =0
+
+    pixel_buffer = pixel.copy()
+    #20
+    while desvio > 20:
+
+       
+        mediana = np.median(pixel_buffer)
+        distancias = np.abs(pixel_buffer - mediana)
+        
+        # Remover o valor mais distante da mediana
+        indice_remover = np.argmax(distancias)
+        pixel_buffer = np.delete(pixel_buffer, indice_remover)
+        desvio = np.std(pixel_buffer)
+        #print("desvio",desvio)
+
+    print("desvio padrao",desvio)
+    print(pixel_buffer)
+    
+    
+    x=0
+
+
+    max_arroz = pixel_buffer[-1]/mediana
+    min_arroz = pixel[0]/mediana
+
+    print("max arroz",max_arroz)
+    print("min arroz",min_arroz)
+
+   # print("Parametros",min_arroz,1/min_arroz)
+
+    #Estou pegando arroz grande e somando +1. ex 340/240
+    for i in range (int(tam/2),tam):
+        if(pixel[i]/mediana > max_arroz):
+            print(pixel[i]/mediana, x,pixel[i]/mediana - int(pixel[i]/mediana))
+            #print("pixel[",i,"] = ",pixel[i] )
+
+            x += int(pixel[i]/mediana) -1
+            if(pixel[i]/mediana - int(pixel[i]/mediana)>=min_arroz):
+                x+=1
+    
+    print(x+tam)
     cv2.imshow ('02 - out', img_out)
     cv2.imwrite ('02 - out.png', img_out*255)
-    cv2.waitKey ()
-    cv2.destroyAllWindows ()
+
+    #cv2.waitKey ()
+    #cv2.destroyAllWindows ()
 
 
 if __name__ == '__main__':
