@@ -247,10 +247,11 @@ def main ():
 
     #calcula mediana e desvio
 
-    mediana_outl = np.median(pixels_sem_outliers)
+    '''mediana_outl = np.median(pixels_sem_outliers)
     desvio_outl = np.std(pixels_sem_outliers)
     cont_arroz = 0
-    for pixel in pixels_sem_outliers:
+    pixels_out = pixel_buffer - pixels_sem_outliers
+    for pixel in pixels_out:
         if pixel <= (mediana_outl + 2 * desvio_outl):
             cont_arroz += 1
     #Para cada pixel entre o intervalo de mediana +- 2desvios, aumenta o contador
@@ -261,7 +262,7 @@ def main ():
     print(mediana_outl)
     print(desvio_outl)
     #cv2.waitKey ()
-    #cv2.destroyAllWindows ()
+    #cv2.destroyAllWindows ()'''
 
 
 def extract_outliers(pixels):
@@ -271,8 +272,8 @@ def extract_outliers(pixels):
     df = pd.DataFrame(data)
 
     # Cálculo do IQR
-    Q1 = df['values'].quantile(0.15)  # Primeiro quartil (25%)
-    Q3 = df['values'].quantile(0.30)  # Terceiro quartil (75%)
+    Q1 = df['values'].quantile(0.12)  # Primeiro quartil (25%)
+    Q3 = df['values'].quantile(0.23)  # Terceiro quartil (75%)
     IQR = Q3 - Q1                     # Intervalo interquartil (IQR)
 
     # Definir limites para outliers
@@ -281,8 +282,23 @@ def extract_outliers(pixels):
 
     # Filtrar dados dentro dos limites
     filtered_df = df[(df['values'] >= lower_bound) & (df['values'] <= upper_bound)]
+    filtered = filtered_df['values'].to_numpy()
     
-    return filtered_df['values'].to_numpy()
+    mean = np.mean(filtered)
+    
+    big_blobs_df = df[df['values'] > upper_bound]
+    big_blobs = big_blobs_df['values'].to_numpy()
+    arroz_count = len(filtered)
+    
+    for blob in big_blobs:
+        arroz_count += round(blob/mean)
+
+    print("AQUIIIIIIII")
+    print(filtered)
+    print(big_blobs)
+    print(arroz_count)
+    
+    return arroz_count
 
 if __name__ == '__main__':
     main()
