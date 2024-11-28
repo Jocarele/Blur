@@ -9,10 +9,10 @@ import sys
 import timeit
 import numpy as np
 import cv2
-
+import pandas as pd
 #===============================================================================
 
-INPUT_IMAGE =  '205.bmp'
+INPUT_IMAGE =  'arroz_V2/205.bmp'
 #INPUT_IMAGE = 'documento-3mp.bmp'
 
 # TODO: ajuste estes parâmetros!
@@ -200,6 +200,8 @@ def main ():
     pixel = np.sort(pixel)
     mediana =0
 
+    pixels_sem_outliers = extract_outliers(pixel)
+
     pixel_buffer = pixel.copy()
     #20
     while desvio > 20:
@@ -232,7 +234,7 @@ def main ():
     #Estou pegando arroz grande e somando +1. ex 340/240
     for i in range (int(tam/2),tam):
         if(pixel[i]/mediana > max_arroz):
-            print(pixel[i]/mediana, x,pixel[i]/mediana - int(pixel[i]/mediana))
+            #print(pixel[i]/mediana, x,pixel[i]/mediana - int(pixel[i]/mediana))
             #print("pixel[",i,"] = ",pixel[i] )
 
             x += int(pixel[i]/mediana) -1
@@ -243,9 +245,44 @@ def main ():
     cv2.imshow ('02 - out', img_out)
     cv2.imwrite ('02 - out.png', img_out*255)
 
+    #calcula mediana e desvio
+
+    mediana_outl = np.median(pixels_sem_outliers)
+    desvio_outl = np.std(pixels_sem_outliers)
+    cont_arroz = 0
+    for pixel in pixels_sem_outliers:
+        if pixel <= (mediana_outl + 2 * desvio_outl):
+            cont_arroz += 1
+    #Para cada pixel entre o intervalo de mediana +- 2desvios, aumenta o contador
+    #printa contador
+    print("printa sem outl")
+    print(pixels_sem_outliers)
+    print(cont_arroz)
+    print(mediana_outl)
+    print(desvio_outl)
     #cv2.waitKey ()
     #cv2.destroyAllWindows ()
 
+
+def extract_outliers(pixels):
+
+    # Dados de exemplo
+    data = {'values': pixels}  # Lista com valores (incluindo outliers)
+    df = pd.DataFrame(data)
+
+    # Cálculo do IQR
+    Q1 = df['values'].quantile(0.15)  # Primeiro quartil (25%)
+    Q3 = df['values'].quantile(0.30)  # Terceiro quartil (75%)
+    IQR = Q3 - Q1                     # Intervalo interquartil (IQR)
+
+    # Definir limites para outliers
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+
+    # Filtrar dados dentro dos limites
+    filtered_df = df[(df['values'] >= lower_bound) & (df['values'] <= upper_bound)]
+    
+    return filtered_df['values'].to_numpy()
 
 if __name__ == '__main__':
     main()
