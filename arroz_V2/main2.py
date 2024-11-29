@@ -9,7 +9,7 @@ import sys
 import timeit
 import numpy as np
 import cv2
-
+import pandas as pd
 #===============================================================================
 
 INPUT_IMAGE =  '205.bmp'
@@ -200,6 +200,8 @@ def main ():
     pixel = np.sort(pixel)
     mediana =0
 
+    pixels_sem_outliers = extract_outliers(pixel)
+
     pixel_buffer = pixel.copy()
     #20
     while desvio > 20:
@@ -232,20 +234,81 @@ def main ():
     #Estou pegando arroz grande e somando +1. ex 340/240
     for i in range (int(tam/2),tam):
         if(pixel[i]/mediana > max_arroz):
-            print(pixel[i]/mediana, x,pixel[i]/mediana - int(pixel[i]/mediana))
+            #print(pixel[i]/mediana, x,pixel[i]/mediana - int(pixel[i]/mediana))
             #print("pixel[",i,"] = ",pixel[i] )
 
             x += int(pixel[i]/mediana) -1
             if(pixel[i]/mediana - int(pixel[i]/mediana)>=min_arroz):
                 x+=1
     
-    print(x+tam)
+    #print(x+tam)
     cv2.imshow ('02 - out', img_out)
     cv2.imwrite ('02 - out.png', img_out*255)
 
-    #cv2.waitKey ()
-    #cv2.destroyAllWindows ()
+    #calcula mediana e desvio
 
+    '''mediana_outl = np.median(pixels_sem_outliers)
+    desvio_outl = np.std(pixels_sem_outliers)
+    cont_arroz = 0
+    pixels_out = pixel_buffer - pixels_sem_outliers
+    for pixel in pixels_out:
+        if pixel <= (mediana_outl + 2 * desvio_outl):
+            cont_arroz += 1
+    #Para cada pixel entre o intervalo de mediana +- 2desvios, aumenta o contador
+    #printa contador
+    print("printa sem outl")
+    print(pixels_sem_outliers)
+    print(cont_arroz)
+    print(mediana_outl)
+    print(desvio_outl)
+    #cv2.waitKey ()
+    #cv2.destroyAllWindows ()'''
+
+
+def extract_outliers(pixels):
+
+    # Dados de exemplo
+    data = {'values': pixels}  # Lista com valores (incluindo outliers)
+    df = pd.DataFrame(data)
+
+    # Cálculo do IQR
+    Q1 = df['values'].quantile(0.25)  # Primeiro quartil (25%)
+    Q3 = df['values'].quantile(0.50)  # Terceiro quartil (75%)
+    IQR = Q3 - Q1                     # Intervalo interquartil (IQR)
+
+    # Definir limites para outliers
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1* IQR
+    print(Q1)
+
+    # Filtrar dados dentro dos limites
+    filtered_df = df[(df['values'] >= lower_bound) & (df['values'] <= upper_bound)]
+    filtered = filtered_df['values'].to_numpy()
+    
+    mean = np.mean(filtered)
+    half_blobs_df = df[df['values'] < lower_bound]
+    half_blobs = half_blobs_df['values'].to_numpy()
+
+
+    big_blobs_df = df[df['values'] > upper_bound]
+    big_blobs = big_blobs_df['values'].to_numpy()
+    arroz_count = len(filtered)
+    arroz_count += len(half_blobs)
+    mean_half = np.mean(half_blobs)
+
+    for blob in big_blobs:
+        arroz_count += int(blob/mean)
+        if ( blob/mean-int(blob/mean)) > mean_half/mean :
+            arroz_count +=1
+    
+
+    print("AQUIIIIIIII",mean)
+    print(half_blobs,len(half_blobs))
+    print(filtered,len(filtered))
+    print(big_blobs)
+    print(arroz_count)
+    
+    return arroz_count
 
 if __name__ == '__main__':
     main()
